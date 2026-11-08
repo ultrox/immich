@@ -6,9 +6,9 @@ from pathlib import Path
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Export the date picker as a standalone upstream patch.")
-    parser.add_argument("--base", required=True, help="Upstream commit without the date picker")
-    parser.add_argument("--output", default=".scratch/date-picker.patch")
+    parser = argparse.ArgumentParser(description="Export the date picker and monthly search page overlay.")
+    parser.add_argument("--base", required=True, help="Upstream commit without the search overlay")
+    parser.add_argument("--output", default=".scratch/search-overlay.patch")
     args = parser.parse_args()
     root = Path(
         subprocess.check_output(
@@ -23,6 +23,9 @@ def main():
         "web/src/lib/components/shared-components/search-bar/SearchFilters.svelte",
         "web/src/lib/components/search-date-picker",
         "web/src/lib/managers/search-date-preferences-manager.svelte.ts",
+        "web/src/lib/components/search-results",
+        "web/src/lib/components/shared-components/gallery-viewer/GalleryViewer.svelte",
+        "web/src/routes/(user)/search/[[photos=photos]]/[[assetId=id]]/+page.svelte",
     ]
     scratch = root / ".scratch"
     scratch.mkdir(exist_ok=True)
