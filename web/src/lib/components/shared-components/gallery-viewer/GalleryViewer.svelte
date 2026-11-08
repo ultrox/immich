@@ -19,7 +19,7 @@
   import { getNextAsset, getPreviousAsset, navigateToAsset } from '#lib/utils/asset-utils.ts';
   import { moveFocus } from '#lib/utils/focus-util.ts';
   import { handleError } from '#lib/utils/handle-error.ts';
-  import { getJustifiedLayoutFromAssets } from '#lib/utils/layout-utils.ts';
+  import { getJustifiedLayoutFromAssets, type CommonJustifiedLayout } from '#lib/utils/layout-utils.ts';
   import { navigate } from '#lib/utils/navigation.ts';
   import { isTimelineAsset, toTimelineAsset } from '#lib/utils/timeline-util.ts';
   import { TUNABLES } from '#lib/utils/tunables.ts';
@@ -46,6 +46,7 @@
     slidingWindowOffset?: number;
     arrowNavigation?: boolean;
     allowDeletion?: boolean;
+    layout?: CommonJustifiedLayout;
   };
 
   let {
@@ -61,12 +62,13 @@
     pageHeaderOffset = 0,
     arrowNavigation = true,
     allowDeletion = true,
+    layout,
   }: Props = $props();
 
   const navigationAssets = $derived(viewerAssets ?? assets);
 
   const geometry = $derived(
-    getJustifiedLayoutFromAssets(assets, {
+    layout ?? getJustifiedLayoutFromAssets(assets, {
       spacing: 2,
       heightTolerance: 0.5,
       rowHeight: Math.floor(viewport.width) < 850 ? 100 : 235,
