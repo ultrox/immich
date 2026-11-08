@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd web
+files=(src/lib/components/search-date-picker src/lib/components/search-results src/lib/managers/search-date-preferences-manager.svelte.ts src/lib/components/shared-components/search-bar/SearchFilters.svelte src/lib/components/shared-components/gallery-viewer/GalleryViewer.svelte 'src/routes/(user)/search/[[photos=photos]]/[[assetId=id]]/+page.svelte' svelte.config.js tsconfig.json)
+pnpm exec prettier "${files[@]}" --ignore-unknown "${1:---check}"
+pnpm exec eslint "${files[@]}" --no-warn-ignored --max-warnings 0

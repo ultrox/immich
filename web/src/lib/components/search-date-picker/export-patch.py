@@ -20,6 +20,8 @@ def main():
     ).strip()
     paths = [
         "i18n/en.json",
+        "web/svelte.config.js",
+        "web/tsconfig.json",
         "web/src/lib/components/shared-components/search-bar/SearchFilters.svelte",
         "web/src/lib/components/search-date-picker",
         "web/src/lib/managers/search-date-preferences-manager.svelte.ts",

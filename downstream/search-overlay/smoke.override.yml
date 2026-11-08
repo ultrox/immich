@@ -1,0 +1,20 @@
+services:
+  immich-server:
+    image: ${CUSTOM_IMAGE:?Set CUSTOM_IMAGE}
+    container_name: !reset null
+    env_file: !override
+      - ${SMOKE_ENV_FILE:?Set SMOKE_ENV_FILE}
+    ports: !override
+      - '127.0.0.1::2283'
+    volumes: !override
+      - smoke-uploads:/data
+  redis:
+    container_name: !reset null
+  database:
+    container_name: !reset null
+    volumes: !override
+      - smoke-database:/var/lib/postgresql/data
+
+volumes:
+  smoke-uploads:
+  smoke-database:
