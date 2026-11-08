@@ -1,4 +1,6 @@
 <script lang="ts">
+  import SearchDateLabel from '#lib/components/search-date-picker/SearchDateLabel.svelte';
+  import SearchDateSection from '#lib/components/search-date-picker/SearchDateSection.svelte';
   import { authManager } from '#lib/managers/auth-manager.svelte.ts';
   import { searchManager } from '#lib/managers/search-manager.svelte.ts';
   import { getAllTagsQuery } from '#lib/queries/tag.query.ts';
@@ -21,7 +23,6 @@
   import { fly } from 'svelte/transition';
   import SearchButton from './SearchButton.svelte';
   import SearchCameraSection from './SearchCameraSection.svelte';
-  import SearchDateSection from './SearchDateSection.svelte';
   import SearchDisplaySection from './SearchDisplaySection.svelte';
   import SearchHistorySection from './SearchHistorySection.svelte';
   import SearchLocationSection from './SearchLocationSection.svelte';
@@ -62,6 +63,8 @@
   }: Props = $props();
 
   let searchHistory = $state<SearchHistorySection>();
+  let dateSection = $state<SearchDateSection>();
+  let dateValid = $state(true);
 
   let activeFilter = $state('type');
   let showAdvanced = $state(false);
@@ -140,6 +143,7 @@
   );
 
   const clear = () => {
+    dateSection?.clear();
     searchManager.reset();
     peopleTitle = tagsTitle = undefined;
   };
@@ -207,7 +211,11 @@
               class={activeFilter === item.name ? 'border-2' : undefined}
               onclick={() => (activeFilter = item.name)}
             >
-              {item.activeTitle() ?? item.title}
+              {#if item.name === 'date'}
+                <SearchDateLabel />
+              {:else}
+                {item.activeTitle() ?? item.title}
+              {/if}
             </SearchButton>
           {/each}
         </div>
@@ -219,7 +227,7 @@
           {:else if activeFilter === 'people'}
             <SearchPeopleSection bind:title={peopleTitle} parentPromise={peoplePromise} />
           {:else if activeFilter === 'date'}
-            <SearchDateSection />
+            <SearchDateSection bind:this={dateSection} bind:isValid={dateValid} {onSearch} />
           {:else if activeFilter === 'places'}
             <SearchLocationSection />
           {:else if activeFilter === 'tags'}
@@ -264,7 +272,9 @@
           class="bg-transparent"
           onclick={() => clear()}>{$t('clear_all')}</Button
         >
-        <Button size="small" shape="round" onclick={() => onSearch()}>{$t('search')}</Button>
+        <Button size="small" shape="round" disabled={activeFilter === 'date' && !dateValid} onclick={() => onSearch()}
+          >{$t('search')}</Button
+        >
       </div>
     </div>
   {/if}
