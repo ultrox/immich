@@ -1,0 +1,39 @@
+name: Upstream release notifications
+
+on:
+  schedule:
+    - cron: '23 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upstream-release-notifications
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    if: github.repository == 'ultrox/immich'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac
+        with:
+          install: false
+      - name: Test notification logic
+        run: mise //:upstream-release-test
+      - name: Notify about new stable upstream releases
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        with:
+          script: |
+            const { notify } = require('./.github/scripts/upstream-release-notifications.cjs');
+            const result = await notify({ github, repo: context.repo });
+            core.info(JSON.stringify(result, null, 2));
+            await core.summary.addCodeBlock(JSON.stringify(result, null, 2), 'json').write();
