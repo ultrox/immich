@@ -1,6 +1,6 @@
 # Local date picker overlay
 
-This is a downstream-only customization. Keep it as one local commit on top of
+This is a downstream-only customization. Keep it as a small patch series on top of
 Immich rather than maintaining a separate version of the search UI.
 
 ## Upstream footprint
@@ -10,10 +10,15 @@ Immich rather than maintaining a separate version of the search UI.
   the shared Search/Clear all controls and validation.
 - `i18n/en.json`: the `search_date_*` translation keys.
 
-Everything else is additive: this folder and
+Everything else in the date picker is additive: this folder and
 `web/src/lib/managers/search-date-preferences-manager.svelte.ts`.
 The original upstream date section and user-preferences manager are unchanged.
 No backend, API, generated client, dependency, or database changes are required.
+
+The overlay also includes a [replacement search page](../search-results/README.md)
+with chronological sorting, monthly grouping, and a snapping month scrubber.
+That feature replaces the search route with an import and adds an optional layout
+prop to `GalleryViewer.svelte`. Its implementation lives in `search-results/`.
 
 ## Apply on top of upstream
 
@@ -24,16 +29,16 @@ Export the overlay, including new files, from the repository root:
 python3 web/src/lib/components/search-date-picker/export-patch.py --base 87ef895041e160aef4f61f2d7af1ad3f8e38827d
 ```
 
-The result is `.scratch/date-picker.patch`. Copy it outside this checkout before
+The result is `.scratch/search-overlay.patch`, containing both features. Copy it outside this checkout before
 replacing the checkout. In a clean checkout of the desired upstream revision:
 
 ```sh
-git apply --check /path/to/date-picker.patch
-git apply /path/to/date-picker.patch
+git apply --check /path/to/search-overlay.patch
+git apply /path/to/search-overlay.patch
 ```
 
-After reviewing, keep these files together in one local commit. For subsequent
-upstream updates, rebase that commit or cherry-pick it onto a fresh upstream
+After reviewing, keep these files together in focused downstream commits. For subsequent
+upstream updates, rebase those commits or cherry-pick them onto a fresh upstream
 branch. Do not reapply the patch to a branch that already contains it.
 
 If upstream changes the integration, reconcile the small `SearchFilters.svelte`
@@ -54,6 +59,7 @@ mise //:sdk:build
 mise //web:install
 mise //web:check
 mise //web:test --run src/lib/components/search-date-picker
+mise //web:test --run src/lib/components/search-results
 mise //web:build
 ```
 

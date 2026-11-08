@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { CommonJustifiedLayout } from '#lib/utils/layout-utils.ts';
   import { goto } from '$app/navigation';
   import { shortcuts, type ShortcutOptions } from '$lib/actions/shortcut';
   import type { Action } from '$lib/components/asset-viewer/actions/action';
@@ -47,6 +48,7 @@
     slidingWindowOffset?: number;
     arrowNavigation?: boolean;
     allowDeletion?: boolean;
+    layout?: CommonJustifiedLayout;
   };
 
   let {
@@ -63,12 +65,13 @@
     pageHeaderOffset = 0,
     arrowNavigation = true,
     allowDeletion = true,
+    layout,
   }: Props = $props();
 
   const navigationAssets = $derived(viewerAssets ?? assets);
 
   const geometry = $derived(
-    getJustifiedLayoutFromAssets(assets, {
+    layout ?? getJustifiedLayoutFromAssets(assets, {
       spacing: 2,
       heightTolerance: 0.5,
       rowHeight: Math.floor(viewport.width) < 850 ? 100 : 235,
