@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+: "${CUSTOM_IMAGE:?Set CUSTOM_IMAGE to the full image tag}"
+: "${CUSTOM_VERSION:?Set CUSTOM_VERSION}"
+test -f web/build/index.html
+docker buildx build --platform linux/amd64 --load \
+  --file downstream/search-overlay/Dockerfile \
+  --build-arg "SOURCE_COMMIT=$(git rev-parse HEAD)" \
+  --build-arg "CUSTOM_VERSION=${CUSTOM_VERSION}" \
+  --tag "${CUSTOM_IMAGE}" .

@@ -26,6 +26,8 @@ const config = {
       precompress: true,
     }),
     alias: {
+      '#lib': 'src/lib',
+      '#lib/*': 'src/lib/*',
       $lib: 'src/lib',
       '$lib/*': 'src/lib/*',
       $tests: 'src/../tests',

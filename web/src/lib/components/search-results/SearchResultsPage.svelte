@@ -7,6 +7,7 @@
   import ButtonContextMenu from '#lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import SearchBar from '#lib/components/shared-components/search-bar/SearchBar.svelte';
   import AssetSelectControlBar from '#lib/components/timeline/AssetSelectControlBar.svelte';
+  import ArchiveAction from '#lib/components/timeline/actions/ArchiveAction.svelte';
   import ChangeDate from '#lib/components/timeline/actions/ChangeDateAction.svelte';
   import ChangeDescription from '#lib/components/timeline/actions/ChangeDescriptionAction.svelte';
   import ChangeLocation from '#lib/components/timeline/actions/ChangeLocationAction.svelte';
@@ -17,10 +18,7 @@
   import { QueryParameter } from '#lib/constants.ts';
   import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
   import { searchManager } from '#lib/managers/search-manager.svelte.ts';
-  import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
-  import { createPreloadedQuery, queryClient } from '#lib/queries/client.ts';
-  import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
-  import { getTagByIdQuery } from '#lib/queries/tag.query.ts';
+  import { featureFlagsManager } from '#lib/managers/feature-flags-manager.svelte.ts';
   import { Route } from '#lib/route.ts';
   import { getAssetBulkActions } from '#lib/services/asset.service.ts';
   import { lang, locale } from '#lib/stores/preferences.store.ts';
@@ -33,6 +31,7 @@
     AssetOrder,
     AssetVisibility,
     getPerson,
+    getTagById,
     searchAssets,
     searchSmart,
     type AssetResponseDto,
@@ -45,9 +44,6 @@
   import { t } from 'svelte-i18n';
   import { afterNavigate, goto } from '$app/navigation';
   import { page } from '$app/state';
-
-  const query = createPreloadedQuery(getUserConfigQuery);
-  const config = $derived(query.data);
 
   // The GalleryViewer pushes it's own history state, which causes weird
   // behavior for history.back(). To prevent that we store the previous page
@@ -67,7 +63,7 @@
   type SearchTerms = MetadataSearchDto & Pick<SmartSearchDto, 'query' | 'queryAssetId'>;
   let searchQuery = $derived(page.url.searchParams.get(QueryParameter.QUERY));
   let terms = $derived<SearchTerms>(searchQuery ? JSON.parse(searchQuery) : {});
-  const smartSearch = $derived(('query' in terms || 'queryAssetId' in terms) && config.machineLearning.clip.enabled);
+  const smartSearch = $derived(('query' in terms || 'queryAssetId' in terms) && featureFlagsManager.value.smartSearch);
   let searchTermKeys = $derived(getObjectKeys(terms));
 
   $effect.pre(() => {
@@ -97,9 +93,7 @@
     }
   });
 
-  afterNavigate(({ from, shallow, type }) => {
-    if (shallow && type === 'goto') return;
-
+  afterNavigate(({ from }) => {
     // Prevent setting previousRoute to the current page.
     if (from?.url && from.route.id !== page.route.id) {
       previousRoute = from.url.href;
@@ -264,7 +258,7 @@
     }
     const tagNames = await Promise.all(
       tagIds.map(async (tagId) => {
-        const tag = await queryClient.query(getTagByIdQuery(tagId));
+        const tag = await getTagById({ id: tagId });
 
         return tag.value;
       }),
@@ -278,21 +272,6 @@
 
     if (terms.isNotInAlbum) {
       const assetIdSet = new Set(assetIds);
-      searchResultAssets = searchResultAssets.filter((asset) => !assetIdSet.has(asset.id));
-    }
-  };
-
-  const onAssetsArchive = (assetIds: string[]) => {
-    if (!terms.visibility || terms.visibility === AssetVisibility.Timeline) {
-      const assetIdSet = new Set(assetIds);
-      searchResultAssets = searchResultAssets.filter((asset) => !assetIdSet.has(asset.id));
-    }
-  };
-
-  // TODO: add back in opposite case
-  const onAssetsUnarchive = (assets: TimelineAsset[]) => {
-    if (terms.visibility === AssetVisibility.Archive) {
-      const assetIdSet = new Set(assets.map((asset) => asset.id));
       searchResultAssets = searchResultAssets.filter((asset) => !assetIdSet.has(asset.id));
     }
   };
@@ -312,13 +291,13 @@
 </script>
 
 <svelte:window bind:scrollY />
-<OnEvents {onAlbumAddAssets} {onAssetsArchive} {onAssetsUnarchive} />
+<OnEvents {onAlbumAddAssets} />
 
 {#if searchTermKeys.length > 0}
   <section id="search-chips" class="mx-auto mt-24 w-full max-w-7xl px-4 sm:px-8 lg:px-12">
     <div class="flex w-full flex-wrap place-content-center place-items-center gap-2.5 sm:gap-3">
       {#each searchTermKeys as searchKey (searchKey)}
-        {const value = terms[searchKey]}
+        {@const value = terms[searchKey]}
         <div
           class="inline-flex max-w-full items-center rounded-full bg-primary/10 py-1 ps-1 pe-1 text-xs text-primary ring-1 ring-primary/15 transition-shadow hover:ring-primary/25 dark:bg-immich-dark-primary/15 dark:text-immich-dark-primary dark:ring-immich-dark-primary/20 dark:hover:ring-immich-dark-primary/30"
         >
@@ -429,7 +408,7 @@
     {#if assetMultiSelectManager.selectionActive}
       <div class="fixed inset-s-0 top-0 z-2 w-full">
         <AssetSelectControlBar>
-          {const Actions = $derived(getAssetBulkActions($t))}
+          {@const Actions = getAssetBulkActions($t)}
           <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
 
           <ActionButton action={Actions.CreateSharedLink} />
@@ -461,8 +440,13 @@
               <ChangeDate menuItem />
               <ChangeDescription menuItem />
               <ChangeLocation menuItem />
-              <ActionMenuItem action={Actions.Archive} />
-              <ActionMenuItem action={Actions.Unarchive} />
+              <ArchiveAction
+                menuItem
+                unarchive={assetMultiSelectManager.isAllArchived}
+                onArchive={(ids, visibility) => {
+                  if ((terms.visibility ?? AssetVisibility.Timeline) !== visibility) onAssetDelete(ids);
+                }}
+              />
               <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
               <ActionMenuItem action={Actions.Tag} />
 

@@ -22,11 +22,13 @@ prop to `GalleryViewer.svelte`. Its implementation lives in `search-results/`.
 
 ## Apply on top of upstream
 
-The initial upstream base is `87ef895041e160aef4f61f2d7af1ad3f8e38827d`.
+This release uses upstream v3.3.6, commit `587f549f46f1cd1822a06e16dcccecef04ea4565`.
+The stable adapter also adds the `#lib` alias in `web/svelte.config.js` and enables
+explicit TypeScript import extensions in `web/tsconfig.json`.
 Export the overlay, including new files, from the repository root:
 
 ```sh
-python3 web/src/lib/components/search-date-picker/export-patch.py --base 87ef895041e160aef4f61f2d7af1ad3f8e38827d
+python3 web/src/lib/components/search-date-picker/export-patch.py --base v3.3.6
 ```
 
 The result is `.scratch/search-overlay.patch`, containing both features. Copy it outside this checkout before
@@ -65,6 +67,12 @@ mise //web:build
 
 Smoke-check Search → Date: selected current year, `01` → Tab → Enter, Last 30 days,
 switching filters, Clear all, reversed custom dates, and the age badge.
+
+The stable happy-dom test environment does not implement `option:checked` correctly.
+The sort test supplies the selected option for that selector; browser smoke checks
+also verify the native select and chronological results.
+
+Image builds and release handoff are described in `downstream/search-overlay/README.md`.
 
 ## Birthday and local demo
 

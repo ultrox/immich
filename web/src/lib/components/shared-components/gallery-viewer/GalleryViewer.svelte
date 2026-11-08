@@ -71,12 +71,13 @@
   const navigationAssets = $derived(viewerAssets ?? assets);
 
   const geometry = $derived(
-    layout ?? getJustifiedLayoutFromAssets(assets, {
-      spacing: 2,
-      heightTolerance: 0.5,
-      rowHeight: Math.floor(viewport.width) < 850 ? 100 : 235,
-      rowWidth: Math.floor(viewport.width),
-    }),
+    layout ??
+      getJustifiedLayoutFromAssets(assets, {
+        spacing: 2,
+        heightTolerance: 0.5,
+        rowHeight: Math.floor(viewport.width) < 850 ? 100 : 235,
+        rowWidth: Math.floor(viewport.width),
+      }),
   );
 
   const getStyle = (index: number) => {

@@ -3,16 +3,16 @@ import {
   getSearchMonthLayout,
   sortSearchAssets,
 } from '#lib/components/search-results/search-results-layout.ts';
-import { factory } from '#test/unit/factories.ts';
 import { AssetOrder } from '@immich/sdk';
 import { describe, expect, it } from 'vitest';
+import { assetFactory } from '@test-data/factories/asset-factory';
 
 describe('monthly search layout', () => {
   const assets = [
-    factory.asset({ localDateTime: '2024-02-01T00:15:00.000Z', fileCreatedAt: '2024-01-31T23:15:00.000Z' }),
-    factory.asset({ localDateTime: '2024-01-01T10:00:00.000Z' }),
-    factory.asset({ localDateTime: '2024-01-31T10:00:00.000Z' }),
-    factory.asset({ localDateTime: '2025-01-01T10:00:00.000Z' }),
+    assetFactory.build({ localDateTime: '2024-02-01T00:15:00.000Z', fileCreatedAt: '2024-01-31T23:15:00.000Z' }),
+    assetFactory.build({ localDateTime: '2024-01-01T10:00:00.000Z' }),
+    assetFactory.build({ localDateTime: '2024-01-31T10:00:00.000Z' }),
+    assetFactory.build({ localDateTime: '2025-01-01T10:00:00.000Z' }),
   ];
 
   it('sorts across pages and year boundaries using the photo calendar date', () => {

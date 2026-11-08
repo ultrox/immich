@@ -1,0 +1,86 @@
+name: Custom Immich release
+
+on:
+  push:
+    branches: [date-picker, 'prepare/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: custom-immich-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CUSTOM_VERSION: v3.3.6-custom.1
+  CUSTOM_IMAGE: ghcr.io/ultrox/immich-custom:${{ github.sha }}
+  IMMICH_BUILD: v3.3.6-custom.1
+  MISE_LOCKFILE: 'false'
+
+jobs:
+  release:
+    if: github.repository == 'ultrox/immich'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+        with:
+          install: false
+      - name: Install and build SDK
+        run: |
+          mise //:sdk:install
+          mise //:sdk:build
+          mise //web:install
+      - name: Verify overlay
+        run: |
+          mise //:custom-web-verify
+          mise //web:check
+          mise //web:test --run src/lib/components/search-date-picker src/lib/components/search-results
+      - name: Build web
+        run: mise //web:build
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build custom image
+        run: mise //:custom-image
+      - name: Test actual image
+        run: mise //:custom-image-test
+      - name: Publish verified image
+        run: docker push "$CUSTOM_IMAGE"
+      - name: Record immutable release
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          docker image inspect "$CUSTOM_IMAGE" --format '{{json .RepoDigests}}' > image-digests.json
+          python3 - <<'PY'
+          import json, os
+          image = os.environ['CUSTOM_IMAGE'].rsplit(':', 1)[0]
+          digests = json.load(open('image-digests.json'))
+          pinned = next(value for value in digests if value.startswith(image + '@'))
+          release = {
+              'version': os.environ['CUSTOM_VERSION'],
+              'upstream': 'v3.3.6',
+              'upstreamCommit': '587f549f46f1cd1822a06e16dcccecef04ea4565',
+              'commit': os.environ['SOURCE_COMMIT'],
+              'image': pinned,
+              'platform': 'linux/amd64',
+              'machineLearningImage': 'ghcr.io/immich-app/immich-machine-learning:v3.3.6',
+              'workflow': os.environ['RUN_URL'],
+          }
+          with open('release.json', 'w') as file:
+              json.dump(release, file, indent=2)
+              file.write('\n')
+          print(json.dumps(release, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: custom-release
+          path: release.json
+          if-no-files-found: error

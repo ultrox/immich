@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+smoke_dir=$(mktemp -d)
+export SMOKE_ENV_FILE="$smoke_dir/env"
+cat > "$SMOKE_ENV_FILE" <<EOF
+IMMICH_VERSION=v3.3.6
+UPLOAD_LOCATION=$smoke_dir/uploads
+DB_DATA_LOCATION=$smoke_dir/database
+DB_PASSWORD=disposable-ci-only
+DB_USERNAME=postgres
+DB_DATABASE_NAME=immich
+EOF
+compose=(docker compose --env-file "$SMOKE_ENV_FILE" -p "immich-custom-smoke-$$" -f docker/docker-compose.yml -f downstream/search-overlay/smoke.override.yml)
+cleanup() {
+  "${compose[@]}" logs --tail 100 immich-server
+  "${compose[@]}" down --volumes
+  rm -r "$smoke_dir"
+}
+trap cleanup EXIT
+"${compose[@]}" up -d --wait --wait-timeout 300 immich-server
+address=$("${compose[@]}" port immich-server 2283)
+curl --fail --silent "http://$address/api/server/ping"
+curl --fail --silent "http://$address/api/server/version" | \
+  python3 -c 'import json,sys; v=json.load(sys.stdin); assert (v["major"],v["minor"],v["patch"]) == (3,3,6), v'
+curl --fail --silent "http://$address/" > /dev/null
+"${compose[@]}" exec -T immich-server sh -c "grep -Rq 'search_results_month_timeline' /build/www/_app"
