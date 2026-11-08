@@ -10,6 +10,10 @@ services:
       - smoke-uploads:/data
   redis:
     container_name: !reset null
+  immich-machine-learning:
+    container_name: !reset null
+    env_file: !override
+      - ${SMOKE_ENV_FILE:?Set SMOKE_ENV_FILE}
   database:
     container_name: !reset null
     volumes: !override
