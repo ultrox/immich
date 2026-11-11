@@ -108,12 +108,7 @@ async function notify({ github, repo, fetchImpl = fetch }) {
     const body = [
       marker(release.tag_name),
       "```json\n" + JSON.stringify(metadata, null, 2) + "\n```",
-      release.body ?? "",
     ].join("\n\n");
-    if (body.length > 65_536)
-      throw new Error(
-        `Release notes exceed the issue body limit: ${release.tag_name}`,
-      );
     const { data: issue } = await github.rest.issues.create({
       ...repo,
       title: release.tag_name,

@@ -66,13 +66,14 @@ function fixture({
   return { github, repo, fetchImpl, calls, created };
 }
 
-test("copies upstream notes and records the actual published custom baseline", async () => {
+test("links to upstream notes and records the actual published custom baseline", async () => {
   const upstream = release("v3.3.7");
   const state = fixture({ releases: [upstream] });
   const result = await notify(state);
   assert.equal(result.created.length, 1);
   assert.equal(state.created[0].title, upstream.tag_name);
-  assert.ok(state.created[0].body.endsWith(upstream.body));
+  assert.ok(state.created[0].body.includes(upstream.html_url));
+  assert.ok(!state.created[0].body.includes(upstream.body));
   assert.match(
     state.created[0].body,
     /"currentCustomBuildUpstream": "v3\.3\.6"/,
@@ -80,6 +81,34 @@ test("copies upstream notes and records the actual published custom baseline", a
   assert.match(state.created[0].body, /"notificationOnly": true/);
   assert.equal(state.created[0].owner, repo.owner);
   assert.equal(state.created[0].repo, repo.repo);
+});
+
+test("never republishes upstream mentions, PR references or release prose", async () => {
+  const upstream = release("v3.4.0", {
+    name: "Thanks @contributor and @immich-app/team",
+    body: [
+      "Thanks @contributor and @immich-app/team",
+      "https://github.com/immich-app/immich/pull/123",
+      "immich-app/immich#456 and #789",
+      "Upstream release prose. ".repeat(4000),
+    ].join("\n"),
+  });
+  const state = fixture({ releases: [upstream] });
+  await notify(state);
+  assert.equal(state.created.length, 1);
+  const { title, body } = state.created[0];
+  assert.equal(title, "v3.4.0");
+  assert.doesNotMatch(body, /@|\/pull\/|#\d+|Upstream release prose/);
+  const match = body.match(
+    /^<!-- immich-upstream-release:v3\.4\.0 -->\n\n```json\n([\s\S]+)\n```$/,
+  );
+  assert.ok(match, "issue must contain only the marker and version metadata");
+  assert.deepEqual(JSON.parse(match[1]), {
+    upstreamRelease: upstream.html_url,
+    currentCustomBuild: "v3.3.6-custom.1",
+    currentCustomBuildUpstream: "v3.3.6",
+    notificationOnly: true,
+  });
 });
 
 test("ignores drafts, prereleases, non-version tags and already incorporated versions", async () => {

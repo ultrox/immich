@@ -19,9 +19,12 @@ fails the run rather than using a stale baseline.
 
 Every published stable upstream `vX.Y.Z` newer than that baseline is eligible,
 including releases missed between daily runs. Drafts, prereleases and other tags
-are ignored. Issue titles copy the upstream tag, and bodies copy the upstream
-release notes verbatim alongside JSON metadata identifying the upstream URL and
-current custom build/version. The workflow does not author release commentary.
+are ignored. Issue titles copy the upstream tag. Bodies contain only the
+deduplication marker and JSON metadata identifying the upstream release URL,
+current custom build/version, and notification-only status. Read the upstream
+notes at that URL; never copy release prose, contributor mentions, or PR/issue
+references into notifications, since GitHub can notify the referenced people
+and repositories. This also applies when publishing custom release notes.
 
 Before creating issues it paginates all repository issues with `state: all`,
 including closed issues. A release-specific body marker survives title/label
@@ -41,5 +44,7 @@ mise //:upstream-release-test
 ```
 
 Tests cover release filtering, numeric ordering, missed releases, open/closed
-deduplication beyond 100 issues, reruns, changing custom baselines and metadata
-failures. The workflow runs these tests before contacting the live release APIs.
+deduplication beyond 100 issues, reruns, changing custom baselines, metadata
+failures, and exclusion of upstream prose, mentions and PR references even for
+oversized release notes. The workflow runs these tests before contacting the
+live release APIs.
