@@ -3,7 +3,7 @@ set -euo pipefail
 smoke_dir=$(mktemp -d)
 export SMOKE_ENV_FILE="$smoke_dir/env"
 cat > "$SMOKE_ENV_FILE" <<EOF
-IMMICH_VERSION=v3.3.6
+IMMICH_VERSION=v3.4.0
 UPLOAD_LOCATION=$smoke_dir/uploads
 DB_DATA_LOCATION=$smoke_dir/database
 DB_PASSWORD=disposable-ci-only
@@ -21,6 +21,53 @@ trap cleanup EXIT
 address=$("${compose[@]}" port immich-server 2283)
 curl --fail --silent "http://$address/api/server/ping"
 curl --fail --silent "http://$address/api/server/version" | \
-  python3 -c 'import json,sys; v=json.load(sys.stdin); assert (v["major"],v["minor"],v["patch"]) == (3,3,6), v'
-curl --fail --silent "http://$address/" > /dev/null
+  python3 -c 'import json,sys; v=json.load(sys.stdin); assert (v["major"],v["minor"],v["patch"]) == (3,4,0), v'
+curl --fail --silent -D "$smoke_dir/headers" "http://$address/" > "$smoke_dir/index.html"
+"${compose[@]}" exec -T immich-server cat /build/www/.csp.json > "$smoke_dir/csp.json"
+python3 - "$smoke_dir" <<'PY'
+import hashlib
+import base64
+import json
+import sys
+from html.parser import HTMLParser
+from pathlib import Path
+
+root = Path(sys.argv[1])
+manifest = json.loads((root / 'csp.json').read_text())
+headers = (root / 'headers').read_text()
+csp = next(line.split(':', 1)[1].strip() for line in headers.splitlines()
+           if line.lower().startswith('content-security-policy:'))
+directives = dict(part.strip().split(' ', 1) for part in csp.split(';') if ' ' in part.strip())
+assert "'unsafe-inline'" not in directives['script-src'], csp
+
+class InlineHashes(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=False)
+        self.tag = None
+        self.content = []
+        self.count = 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ('script', 'style') and 'src' not in dict(attrs):
+            self.tag = tag
+            self.content = []
+
+    def handle_data(self, data):
+        if self.tag:
+            self.content.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == self.tag:
+            digest = base64.b64encode(hashlib.sha256(''.join(self.content).encode()).digest()).decode()
+            source = f"'sha256-{digest}'"
+            assert source in manifest[f'{tag}-src'], source
+            assert source in directives[f'{tag}-src'], source
+            self.count += 1
+            self.tag = None
+
+parser = InlineHashes()
+parser.feed((root / 'index.html').read_text())
+assert parser.count > 0
+print(f'Custom HTML: {parser.count} inline hashes verified against the served CSP')
+PY
 "${compose[@]}" exec -T immich-server sh -c "grep -Rq 'search_results_month_timeline' /build/www/_app"

@@ -20,14 +20,13 @@ def main():
     ).strip()
     paths = [
         "i18n/en.json",
-        "web/svelte.config.js",
-        "web/tsconfig.json",
         "web/src/lib/components/shared-components/search-bar/SearchFilters.svelte",
         "web/src/lib/components/search-date-picker",
         "web/src/lib/managers/search-date-preferences-manager.svelte.ts",
         "web/src/lib/components/search-results",
         "web/src/lib/components/shared-components/gallery-viewer/GalleryViewer.svelte",
         "web/src/routes/(user)/search/[[photos=photos]]/[[assetId=id]]/+page.svelte",
+        "web/test/medium/specs/search/custom-overlay.spec.ts",
     ]
     scratch = root / ".scratch"
     scratch.mkdir(exist_ok=True)

@@ -2,16 +2,19 @@
 
 Release sequence: upstream stable release → tested custom release → deployment.
 
-`v3.3.6-custom.1` uses upstream `v3.3.6` at
-`587f549f46f1cd1822a06e16dcccecef04ea4565`. The Dockerfile pins the official
+`v3.4.0-custom.1` uses upstream `v3.4.0` at
+`0715bcf8dab4b91118d6184479e2be2767ef8294`. The Dockerfile pins the official
 server image by digest and overlays the custom production web build.
 
 ## Build and verify
 
 The `Custom Immich release` workflow builds on native Linux AMD64. It checks
-types, Svelte, scoped formatting/lint and the 25 overlay tests, builds the web,
+types, Svelte, scoped formatting/lint and the overlay tests, builds the web,
 then starts the actual image with disposable PostgreSQL and Redis containers.
 Health, server version and shipped UI checks must pass before publication.
+Production-browser tests cover 1,200-photo pagination, both sort directions,
+month snapping and viewer return position at desktop and mobile widths. Container
+smoke checks verify every inline HTML hash against the served CSP header.
 The smoke task uses a unique Compose project, random loopback port and temporary
 volumes, and removes its containers and volumes on exit.
 
@@ -22,8 +25,8 @@ mise //web:install
 mise //:custom-web-verify
 mise //web:check
 mise //web:test --run src/lib/components/search-date-picker src/lib/components/search-results
-IMMICH_BUILD=v3.3.6-custom.1 mise //web:build
-export CUSTOM_VERSION=v3.3.6-custom.1
+IMMICH_BUILD=v3.4.0-custom.1 mise //web:test-medium --grep 'custom search overlay'
+export CUSTOM_VERSION=v3.4.0-custom.1
 export CUSTOM_IMAGE=ghcr.io/ultrox/immich-custom:$(git rev-parse HEAD)
 mise //:custom-image
 mise //:custom-image-test
@@ -37,10 +40,13 @@ only after the workflow succeeds. Published digests are never replaced.
 
 ## Deployment handoff
 
-Use the official v3.3.6 Compose configuration. Set the `immich-server` image to
+Use the official v3.4.0 Compose configuration. Set the `immich-server` image to
 the exact `image` from `release.json`, and keep machine learning at
-`ghcr.io/immich-app/immich-machine-learning:v3.3.6` (or its matching acceleration
+`ghcr.io/immich-app/immich-machine-learning:v3.4.0` (or its matching acceleration
 variant). The custom image supports `linux/amd64`.
+Keep `MACHINE_LEARNING_MODEL_REVISION=v2` and the Valkey digest from upstream
+Compose. The custom web build includes its own `.csp.json` inline hashes, which
+the upstream backend reads so the stricter v3.4.0 CSP is preserved.
 
 Apply upstream upgrade requirements and back up the database before a version
 upgrade. Pull and recreate the server with the pinned image, then check login,
@@ -55,3 +61,5 @@ or exported patch, reconcile integration APIs, and update this directory's base
 image pin and the workflow's version metadata. Run the full verification before
 tagging or deploying. The portable UI exporter and instructions are in
 `web/src/lib/components/search-date-picker/README.md`.
+Release notes must link to upstream notes, never copy contributor mentions or
+upstream PR/issue references into the fork's releases or issues.

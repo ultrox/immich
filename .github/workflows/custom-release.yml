@@ -14,9 +14,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  CUSTOM_VERSION: v3.3.6-custom.1
+  CUSTOM_VERSION: v3.4.0-custom.1
   CUSTOM_IMAGE: ghcr.io/ultrox/immich-custom:${{ github.sha }}
-  IMMICH_BUILD: v3.3.6-custom.1
+  IMMICH_BUILD: v3.4.0-custom.1
   MISE_LOCKFILE: 'false'
 
 jobs:
@@ -39,8 +39,8 @@ jobs:
           mise //:custom-web-verify
           mise //web:check
           mise //web:test --run src/lib/components/search-date-picker src/lib/components/search-results
-      - name: Build web
-        run: mise //web:build
+      - name: Build web and test production overlay
+        run: mise //web:test-medium --grep 'custom search overlay'
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -66,12 +66,12 @@ jobs:
           pinned = next(value for value in digests if value.startswith(image + '@'))
           release = {
               'version': os.environ['CUSTOM_VERSION'],
-              'upstream': 'v3.3.6',
-              'upstreamCommit': '587f549f46f1cd1822a06e16dcccecef04ea4565',
+              'upstream': 'v3.4.0',
+              'upstreamCommit': '0715bcf8dab4b91118d6184479e2be2767ef8294',
               'commit': os.environ['SOURCE_COMMIT'],
               'image': pinned,
               'platform': 'linux/amd64',
-              'machineLearningImage': 'ghcr.io/immich-app/immich-machine-learning:v3.3.6',
+              'machineLearningImage': 'ghcr.io/immich-app/immich-machine-learning:v3.4.0',
               'workflow': os.environ['RUN_URL'],
           }
           with open('release.json', 'w') as file:

@@ -62,6 +62,7 @@ test('sorts all semantic results chronologically rather than treating relevance 
   settle,
 }) => {
   data.userConfig.machineLearning.enabled = true;
+  data.userConfig.machineLearning.clip.enabled = true;
   api.on({
     searchSmart: ({ body }) => ({
       json:
@@ -73,9 +74,10 @@ test('sorts all semantic results chronologically rather than treating relevance 
   await router.goto(Route.search({ query: 'beach' }));
   await render(SearchResultsPage, load);
   await settle();
-  expect(
-    [...document.querySelectorAll<HTMLElement>('[data-search-month]')].map((el) => el.dataset.searchMonth),
-  ).toEqual(['2024-01', '2024-12']);
+  await expect
+    .poll(() => [...document.querySelectorAll<HTMLElement>('[data-search-month]')].map((el) => el.dataset.searchMonth))
+    .toEqual(['2024-01', '2024-12']);
+  expect(api.searchSmart).toHaveBeenCalledWith({ body: expect.objectContaining({ page: 1, query: 'beach' }) });
   expect(api.searchSmart).toHaveBeenCalledWith({ body: expect.objectContaining({ page: 2, query: 'beach' }) });
 });
 
@@ -92,6 +94,7 @@ test('keyboard scrubbing lands on the month header, including the final month', 
   await router.goto(Route.search({}));
   await render(SearchResultsPage, load);
   await settle();
+  await expect.poll(() => document.querySelector('[data-search-month="2024-12"]')).not.toBeNull();
   const scroll = vi.spyOn(globalThis, 'scrollTo');
   const header = document.querySelector<HTMLElement>('[data-search-month="2024-12"]')!;
   await page.getByRole('slider', { name: 'search_results_month_timeline' }).click();
