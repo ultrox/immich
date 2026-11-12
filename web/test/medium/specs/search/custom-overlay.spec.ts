@@ -13,7 +13,8 @@ for (const viewport of [
   }) => {
     await page.setViewportSize(viewport);
     const assets = Array.from({ length: 1200 }, (_, index) => {
-      const date = index < 1100 ? '2024-01-05T12:00:00.000Z' : '2024-02-05T12:00:00.000Z';
+      const monthStart = index < 1100 ? '2024-01-05T12:00:00.000Z' : '2024-02-05T12:00:00.000Z';
+      const date = new Date(Date.parse(monthStart) + index * 1000).toISOString();
       return factory.asset({ fileCreatedAt: date, localDateTime: date });
     });
     data.addAssets(assets);
@@ -54,7 +55,10 @@ for (const viewport of [
       .toBe(88);
     const scrollBefore = await page.evaluate(() => window.scrollY);
     const asset = assets[1100];
-    await page.locator(`[data-thumbnail-focus-container][data-asset="${asset.id}"]`).click();
+    const thumbnail = page.locator(`[data-thumbnail-focus-container][data-asset="${asset.id}"]`);
+    await expect(thumbnail).toBeVisible();
+    const box = (await thumbnail.boundingBox())!;
+    await thumbnail.click({ position: { x: box.width - 8, y: box.height - 8 } });
     await app.viewer.waitForAsset(asset);
     await app.viewer.backButton.click();
     await expect(app.viewer.root).toHaveCount(0);
