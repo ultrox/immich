@@ -17,7 +17,22 @@ cleanup() {
   rm -r "$smoke_dir"
 }
 trap cleanup EXIT
-"${compose[@]}" up -d --wait --wait-timeout 300 immich-server
+# Shared CI registry limits can reject otherwise valid pinned dependency pulls.
+# Retry downloads only; startup and smoke-test failures must still fail the job.
+for service in database redis; do
+  attempt=1
+  until "${compose[@]}" pull "$service"; do
+    if (( attempt >= 5 )); then
+      echo "Failed to pull $service after $attempt attempts" >&2
+      exit 1
+    fi
+    delay=$((15 * 2 ** (attempt - 1)))
+    echo "Retrying $service pull in ${delay}s (attempt $((attempt + 1))/5)" >&2
+    sleep "$delay"
+    attempt=$((attempt + 1))
+  done
+done
+"${compose[@]}" up -d --pull never --wait --wait-timeout 300 immich-server
 address=$("${compose[@]}" port immich-server 2283)
 curl --fail --silent "http://$address/api/server/ping"
 curl --fail --silent "http://$address/api/server/version" | \
