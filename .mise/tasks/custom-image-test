@@ -4,6 +4,7 @@ smoke_dir=$(mktemp -d)
 export SMOKE_ENV_FILE="$smoke_dir/env"
 cat > "$SMOKE_ENV_FILE" <<EOF
 IMMICH_VERSION=v3.4.0
+IMMICH_HELMET_FILE=true
 UPLOAD_LOCATION=$smoke_dir/uploads
 DB_DATA_LOCATION=$smoke_dir/database
 DB_PASSWORD=disposable-ci-only
@@ -12,6 +13,10 @@ DB_DATABASE_NAME=immich
 EOF
 compose=(docker compose --env-file "$SMOKE_ENV_FILE" -p "immich-custom-smoke-$$" -f docker/docker-compose.yml -f downstream/search-overlay/smoke.override.yml)
 cleanup() {
+  container=$("${compose[@]}" ps -aq immich-server)
+  if [[ -n "$container" ]]; then
+    docker inspect --format '{{json .State.Health}}' "$container"
+  fi
   "${compose[@]}" logs --tail 100 immich-server
   "${compose[@]}" down --volumes
   rm -r "$smoke_dir"

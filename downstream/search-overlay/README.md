@@ -46,7 +46,8 @@ the exact `image` from `release.json`, and keep machine learning at
 variant). The custom image supports `linux/amd64`.
 Keep `MACHINE_LEARNING_MODEL_REVISION=v2` and the Valkey digest from upstream
 Compose. The custom web build includes its own `.csp.json` inline hashes, which
-the upstream backend reads so the stricter v3.4.0 CSP is preserved.
+the upstream backend reads when `IMMICH_HELMET_FILE=true` is set. Helmet is
+opt-in in v3.4.0; the smoke stack explicitly enables it to verify CSP compatibility.
 
 Apply upstream upgrade requirements and back up the database before a version
 upgrade. Pull and recreate the server with the pinned image, then check login,
